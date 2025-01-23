@@ -1,17 +1,18 @@
-# Usar la imagen oficial de Golang
-FROM golang:1.20
+# Use the official Golang image
+FROM golang:1.20 AS builder
 
-# Establecer el directorio de trabajo
+# Set the working directory
 WORKDIR /app
 
-# Copiar los archivos al contenedor
+# Copy the go.mod and go.sum files
 COPY go.mod go.sum ./
 RUN go mod download
 
+# Copy the rest of the application code
 COPY . .
 
-# Construir la aplicación
-RUN go build -o main .
+# Build the application
+RUN go build -o main ./cmd/server/main.go
 
 # Exponer el puerto de la aplicación
 EXPOSE 8080
