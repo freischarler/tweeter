@@ -6,4 +6,5 @@ import "errors"
 var (
 	ErrCannotFollowSelf = errors.New("cannot follow yourself")
 	ErrTweetTooLong     = errors.New("tweet is too long")
+	ErrTweetNotFound    = errors.New("tweet not found")
 )

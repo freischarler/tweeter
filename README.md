@@ -4,8 +4,8 @@
 1. Clona el repositorio:
 
 ```sh
-git clone https://github.com/tu-usuario/desafio.git
-cd desafio
+git clone https://github.com/freischarler/tweeter.git
+cd tweeter
 ```
 
 2. Configura las variables de entorno para Redis:

@@ -1,22 +1,15 @@
 package http
 
 import (
-	"context"
 	"encoding/json"
 	"log"
 	"net/http"
-	"sort"
-	"strconv"
 
 	"github.com/freischarler/desafio-twitter/internal/application"
-	"github.com/freischarler/desafio-twitter/internal/domain"
-	"github.com/go-redis/redis/v8"
 )
 
 // PostTweet handles posting a tweet
-func PostTweet(redisClient *redis.Client) http.HandlerFunc {
-	tweetService := application.NewTweetService(redisClient)
-
+func PostTweet(tweetService application.TweetService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Received %s request for %s", r.Method, r.URL.Path)
 		r.ParseForm()
@@ -49,9 +42,7 @@ func PostTweet(redisClient *redis.Client) http.HandlerFunc {
 }
 
 // FollowUser handles following a user
-func FollowUser(redisClient *redis.Client) http.HandlerFunc {
-	userService := application.NewUserService(redisClient)
-
+func FollowUser(userService application.UserService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Received %s request for %s", r.Method, r.URL.Path)
 		r.ParseForm()
@@ -78,7 +69,7 @@ func FollowUser(redisClient *redis.Client) http.HandlerFunc {
 }
 
 // Timeline handles viewing a user's timeline
-func Timeline(redisClient *redis.Client) http.HandlerFunc {
+func Timeline(tweetService application.TweetService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Received %s request for %s", r.Method, r.URL.Path)
 		userID := r.URL.Path[len("/timeline/"):]
@@ -89,53 +80,15 @@ func Timeline(redisClient *redis.Client) http.HandlerFunc {
 			return
 		}
 
-		// Fetch the list of followed users
-		following, err := redisClient.SMembers(context.Background(), "user:following:"+userID).Result()
+		tweets, err := tweetService.GetPopularTweets(10) // Example limit
 		if err != nil {
-			http.Error(w, "Failed to fetch following list", http.StatusInternalServerError)
-			log.Printf("Failed to fetch following list: %v", err)
+			http.Error(w, "Failed to fetch timeline", http.StatusInternalServerError)
+			log.Printf("Failed to fetch timeline: %v", err)
 			return
 		}
 
-		var timeline []domain.Tweet
-
-		// Collect tweets from each followed user
-		for _, followeeID := range following {
-			tweetIDs, _ := redisClient.LRange(context.Background(), "user:timeline:"+followeeID, 0, -1).Result()
-			for _, tweetID := range tweetIDs {
-				tweetData, _ := redisClient.HGetAll(context.Background(), "tweet:"+tweetID).Result()
-				if tweetData["content"] != "" {
-					timestamp, _ := strconv.ParseInt(tweetData["timestamp"], 10, 64)
-					timeline = append(timeline, domain.Tweet{
-						UserID:    tweetData["userID"],
-						Content:   tweetData["content"],
-						Timestamp: timestamp,
-					})
-				}
-			}
-		}
-
-		// Include the user's own tweets
-		tweetIDs, _ := redisClient.LRange(context.Background(), "user:timeline:"+userID, 0, -1).Result()
-		for _, tweetID := range tweetIDs {
-			tweetData, _ := redisClient.HGetAll(context.Background(), "tweet:"+tweetID).Result()
-			if tweetData["content"] != "" {
-				timestamp, _ := strconv.ParseInt(tweetData["timestamp"], 10, 64)
-				timeline = append(timeline, domain.Tweet{
-					UserID:    tweetData["userID"],
-					Content:   tweetData["content"],
-					Timestamp: timestamp,
-				})
-			}
-		}
-
-		// Sort tweets by timestamp
-		sort.Slice(timeline, func(i, j int) bool {
-			return timeline[i].Timestamp > timeline[j].Timestamp
-		})
-
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{"timeline": timeline})
+		json.NewEncoder(w).Encode(map[string]interface{}{"timeline": tweets})
 		log.Printf("Timeline fetched successfully for user %s", userID)
 	}
 }
