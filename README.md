@@ -12,7 +12,7 @@ cd tweeter
 
 ```sh
 export REDIS_HOST=localhost:6379
- export REDIS_PASSWORD=yourpassword
+export REDIS_PASSWORD=yourpassword
 export PORT=8080
 ```
 
@@ -34,6 +34,7 @@ docker-compose up --build
 ```
 
 3. Para detener y eliminar los contenedores, volúmenes e imágenes de Docker:
+
 ```sh
 docker-compose down --volumes --rmi all
 ```
@@ -80,14 +81,70 @@ docker-compose down --volumes --rmi all
 curl -X POST http://localhost:8080/tweet -d "userID=1" -d "tweet=Hola Mundo"
 ```
 
+Ejemplo de respuesta
+
+{
+    "message": "Tweet posted successfully",
+    "tweetID": "5"
+}
+
 ### Seguir a un Usuario
 
 ```sh
 curl -X POST http://localhost:8080/follow -d "followerID=1" -d "followeeID=2"
 ```
 
+Ejemplo de respuesta
+
+{
+    "message": "Followed successfully"
+}
+
 ### Ver Timeline
 
 ```sh
 curl http://localhost:8080/timeline/1
 ```
+
+Ejemplo de respuesta
+
+[
+    {
+        "userID": "1",
+        "content": "holaAAA ?",
+        "timestamp": 1738115249
+    },
+    {
+        "userID": "2",
+        "content": "holaAAA ",
+        "timestamp": 1738115241
+    },
+    {
+        "userID": "1",
+        "content": "hola ",
+        "timestamp": 1738115231
+    }
+]
+
+### Pruebas Unitarias
+Para ejecutar las pruebas unitarias, usa el siguiente comando:
+
+```
+go test ./internal/application -v
+```
+
+### Middleware de Limitación de Tasa
+
+Se agrego un middleware que limita el número de solicitudes que un cliente puede hacer en un período de tiempo determinado, ayudando a proteger tu aplicación contra abusos y ataques de denegación de servicio (DoS).
+
+### Posibles Actualizaciones o Mejoras
+
+1. Autenticación y Autorización: Implementar un sistema de autenticación y autorización para asegurar que solo usuarios autenticados puedan publicar tweets y seguir a otros usuarios.
+
+2. Microservicios: Dividir la aplicación en microservicios independientes para mejorar la escalabilidad y la mantenibilidad.
+
+3. Notificaciones en Tiempo Real: Implementar notificaciones en tiempo real para alertar a los usuarios cuando reciben nuevos seguidores o tweets.
+
+4. Optimización del Rendimiento: Optimizar el rendimiento de la aplicación mediante el uso de técnicas de caching, balanceo de carga y optimización de consultas.
+
+5. Pruebas Automatizadas: Añadir pruebas unitarias y de integración para asegurar la calidad del código y facilitar el desarrollo continuo.

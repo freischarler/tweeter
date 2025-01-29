@@ -7,4 +7,5 @@ type TweetService interface {
 	PostTweet(userID, tweet string) (string, error)
 	GetTweet(tweetID string) (domain.Tweet, error)
 	GetPopularTweets(limit int) ([]domain.Tweet, error)
+	GetTimeline(userID string) ([]domain.Tweet, error)
 }

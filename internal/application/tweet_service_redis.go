@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"sort"
 	"strconv"
 	"time"
 
@@ -34,13 +35,13 @@ func (s *RedisTweetService) PostTweet(userID, tweet string) (string, error) {
 	err := s.RedisClient.HSet(s.Ctx, "tweet:"+tweetID, map[string]interface{}{
 		"userID":    userID,
 		"content":   tweet,
-		"timestamp": time.Now().Unix(),
+		"timestamp": time.Now().UnixNano(),
 	}).Err()
 	if err != nil {
 		return "", err
 	}
 
-	err = s.RedisClient.LPush(s.Ctx, "user:timeline:"+userID, tweetID).Err()
+	err = s.RedisClient.RPush(s.Ctx, "user:timeline:"+userID, tweetID).Err()
 	if err != nil {
 		return "", err
 	}
@@ -86,4 +87,44 @@ func (s *RedisTweetService) GetPopularTweets(limit int) ([]domain.Tweet, error) 
 	}
 
 	return tweets, nil
+}
+
+// GetTimeline retrieves the timeline for a user
+func (s *RedisTweetService) GetTimeline(userID string) ([]domain.Tweet, error) {
+	// Fetch the list of followed users
+	following, err := s.RedisClient.SMembers(s.Ctx, "user:following:"+userID).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	var timeline []domain.Tweet
+
+	// Collect tweets from each followed user
+	for _, followeeID := range following {
+		tweetIDs, _ := s.RedisClient.LRange(s.Ctx, "user:timeline:"+followeeID, 0, -1).Result()
+		for _, tweetID := range tweetIDs {
+			tweet, err := s.GetTweet(tweetID)
+			if err != nil {
+				continue
+			}
+			timeline = append(timeline, tweet)
+		}
+	}
+
+	// Include the user's own tweets
+	tweetIDs, _ := s.RedisClient.LRange(s.Ctx, "user:timeline:"+userID, 0, -1).Result()
+	for _, tweetID := range tweetIDs {
+		tweet, err := s.GetTweet(tweetID)
+		if err != nil {
+			continue
+		}
+		timeline = append(timeline, tweet)
+	}
+
+	// Sort tweets by timestamp
+	sort.Slice(timeline, func(i, j int) bool {
+		return timeline[i].Timestamp > timeline[j].Timestamp
+	})
+
+	return timeline, nil
 }

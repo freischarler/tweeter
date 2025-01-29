@@ -80,7 +80,7 @@ func Timeline(tweetService application.TweetService) http.HandlerFunc {
 			return
 		}
 
-		tweets, err := tweetService.GetPopularTweets(10) // Example limit
+		tweets, err := tweetService.GetTimeline(userID)
 		if err != nil {
 			http.Error(w, "Failed to fetch timeline", http.StatusInternalServerError)
 			log.Printf("Failed to fetch timeline: %v", err)
@@ -88,7 +88,7 @@ func Timeline(tweetService application.TweetService) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{"timeline": tweets})
-		log.Printf("Timeline fetched successfully for user %s", userID)
+		json.NewEncoder(w).Encode(tweets)
+		log.Printf("Fetched timeline for user %s successfully", userID)
 	}
 }
