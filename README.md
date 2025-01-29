@@ -137,6 +137,22 @@ go test ./internal/application -v
 
 Se agrego un middleware que limita el número de solicitudes que un cliente puede hacer en un período de tiempo determinado, ayudando a proteger tu aplicación contra abusos y ataques de denegación de servicio (DoS).
 
+### Uso de Redis
+
+Se eligió Redis como base de datos debido a sus características de alto rendimiento y baja latencia, lo que lo hace ideal para aplicaciones que requieren una gran cantidad de lecturas rápidas. Redis almacena los datos en memoria, lo que permite acceder a ellos de manera extremadamente rápida. Esto es crucial para una aplicación que necesita escalar a millones de usuarios y estar optimizada para lecturas, como es el caso de esta aplicación de tweets.
+
+### Arquitectura Hexagonal en Go
+
+La aplicación está desarrollada en Go utilizando una arquitectura hexagonal. Esta arquitectura se centra en la separación de preocupaciones y la independencia de los componentes, lo que facilita el mantenimiento y la escalabilidad de la aplicación. Las características principales de la arquitectura hexagonal son:
+
+Separación de Capas: La aplicación se divide en capas independientes, como la capa de dominio, la capa de aplicación y la capa de infraestructura. Cada capa tiene responsabilidades claras y bien definidas.
+
+Independencia de la Infraestructura: La lógica de negocio no depende de detalles de infraestructura como bases de datos o servicios externos. Esto permite cambiar la infraestructura sin afectar la lógica de negocio.
+
+Facilidad de Pruebas: La separación de capas y la independencia de la infraestructura facilitan la creación de pruebas unitarias y de integración, lo que mejora la calidad del código.
+
+Escalabilidad y Mantenibilidad: La arquitectura hexagonal facilita la escalabilidad y el mantenimiento de la aplicación, ya que los cambios en una capa no afectan a las demás capas.
+
 ### Posibles Actualizaciones o Mejoras
 
 1. Autenticación y Autorización: Implementar un sistema de autenticación y autorización para asegurar que solo usuarios autenticados puedan publicar tweets y seguir a otros usuarios.
