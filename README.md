@@ -39,6 +39,28 @@ docker-compose up --build
 docker-compose down --volumes --rmi all
 ```
 
+## Log del Docker
+
+Ejemplo de log generado por la aplicación cuando se ejecuta en Docker:
+
+```
+api-1  | 2025/01/29 02:22:15 Starting server on port 8080
+api-1  | 2025/01/29 02:22:27 Received POST request for /tweet
+api-1  | 2025/01/29 02:22:27 Tweet posted successfully: 1
+api-1  | 2025/01/29 02:22:34 Received POST request for /tweet
+api-1  | 2025/01/29 02:22:34 Tweet posted successfully: 2
+api-1  | 2025/01/29 02:22:37 Received POST request for /tweet
+api-1  | 2025/01/29 02:22:37 Tweet posted successfully: 3
+api-1  | 2025/01/29 02:22:40 Received POST request for /tweet
+api-1  | 2025/01/29 02:22:40 Tweet posted successfully: 4
+api-1  | 2025/01/29 02:22:43 Received POST request for /tweet
+api-1  | 2025/01/29 02:22:43 Tweet posted successfully: 5
+api-1  | 2025/01/29 02:22:46 Received POST request for /follow
+api-1  | 2025/01/29 02:22:46 User 1 followed user 2 successfully
+api-1  | 2025/01/29 02:22:50 Received GET request for /timeline/1
+api-1  | 2025/01/29 02:22:50 Fetched timeline for user 1 successfully
+```
+
 ## Endpoints
 
 ### Publicar un Tweet
