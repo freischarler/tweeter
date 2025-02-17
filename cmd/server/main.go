@@ -8,7 +8,7 @@ import (
 
 	adapterHttp "github.com/freischarler/desafio-twitter/internal/adapters/http"
 	"github.com/freischarler/desafio-twitter/internal/application"
-	"github.com/freischarler/desafio-twitter/internal/infraestructure/redis"
+	"github.com/freischarler/desafio-twitter/internal/infraestructure/dynamoDb"
 	"github.com/freischarler/desafio-twitter/internal/middleware"
 )
 
@@ -16,9 +16,17 @@ func main() {
 	var tweetService application.TweetService
 	var userService application.UserService
 
-	redisClient := redis.NewRedisClient()
-	tweetService = application.NewRedisTweetService(redisClient)
-	userService = application.NewRedisUserService(redisClient)
+	dynamoDBClient, err := dynamoDb.NewDynamoDBClient()
+	if err != nil {
+		log.Fatalf("Could not create DynamoDB client: %s\n", err)
+	}
+	dynamoConfigurator := dynamoDb.NewDynamoConfigurator(dynamoDBClient)
+	// Setting up tables
+	dynamoConfigurator.SetupDatabase()
+
+	// Crear los servicios usando DynamoDB
+	tweetService = application.NewDynamoDBTweetService(dynamoDBClient)
+	userService = application.NewDynamoDBUserService(dynamoDBClient)
 
 	mux := http.NewServeMux()
 

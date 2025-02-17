@@ -8,11 +8,43 @@ services:
       - REDIS_PASSWORD=
       - PORT=8080
     depends_on:
-      - redis
+      - dynamodb-local
+    networks:
+      - network
 
-  redis:
-    image: redis:6.2
-    container_name: redis
+  dynamodb-local:
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+    image: "amazon/dynamodb-local:latest"
+    container_name: dynamodb-local
     ports:
-      - "6379:6379"
-    command: ["redis-server", "--requirepass", ""]
+      - "8000:8000"
+    volumes:
+      - "./docker/dynamodb:/home/dynamodblocal/data"
+    working_dir: /home/dynamodblocal
+    networks:
+      - network
+
+  dynamodb-admin-gui:
+    image: aaronshaf/dynamodb-admin
+    ports:
+      - "8001:8001"
+    environment:
+      DYNAMO_ENDPOINT: "http://dynamodb-local:8000"
+      AWS_REGION: "us-west-2"
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+    depends_on:
+      - dynamodb-local
+    networks:
+      - network
+
+
+networks:
+  network:
+    driver: bridge
+  #redis:
+  #  image: redis:6.2
+  #  container_name: redis
+  #  ports:
+  #    - "6379:6379"
+  #  command: ["redis-server", "--requirepass", ""]

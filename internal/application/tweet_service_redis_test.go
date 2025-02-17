@@ -18,7 +18,7 @@ func setupTestRedisClient() *redis.Client {
 	})
 }
 
-func TestGetTimeline(t *testing.T) {
+func TestRedisGetTimeline(t *testing.T) {
 	redisClient := setupTestRedisClient()
 	tweetService := NewRedisTweetService(redisClient)
 
@@ -60,7 +60,7 @@ func TestGetTimeline(t *testing.T) {
 	}
 }
 
-func TestGetTimeline_NoFollowing(t *testing.T) {
+func TestRedisGetTimeline_NoFollowing(t *testing.T) {
 	redisClient := setupTestRedisClient()
 	tweetService := NewRedisTweetService(redisClient)
 
@@ -90,7 +90,7 @@ func TestGetTimeline_NoFollowing(t *testing.T) {
 	}
 }
 
-func TestGetTimeline_NoTweets(t *testing.T) {
+func TestRedisGetTimeline_NoTweets(t *testing.T) {
 	redisClient := setupTestRedisClient()
 	tweetService := NewRedisTweetService(redisClient)
 
