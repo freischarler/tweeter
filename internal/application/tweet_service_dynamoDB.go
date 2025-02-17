@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sort"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/freischarler/desafio-twitter/internal/domain"
+	"github.com/go-redis/redis/v8"
 )
 
 var (
@@ -22,13 +24,15 @@ var (
 // DynamoDBTweetService implements TweetService using DynamoDB
 type DynamoDBTweetService struct {
 	DynamoDBClient DynamoDBClient
+	RedisClient    *redis.Client
 	Ctx            context.Context
 }
 
 // NewDynamoDBTweetService creates a new DynamoDBTweetService
-func NewDynamoDBTweetService(client DynamoDBClient) *DynamoDBTweetService {
+func NewDynamoDBTweetService(dynamoDBClient DynamoDBClient, redisClient *redis.Client) *DynamoDBTweetService {
 	return &DynamoDBTweetService{
-		DynamoDBClient: client,
+		DynamoDBClient: dynamoDBClient,
+		RedisClient:    redisClient,
 		Ctx:            context.TODO(),
 	}
 }
@@ -104,48 +108,68 @@ func (s *DynamoDBTweetService) GetTweet(tweetID string) (domain.Tweet, error) {
 	return tweet, nil
 }
 
-// GetPopularTweets retrieves the most popular tweets
-func (s *DynamoDBTweetService) GetPopularTweets(limit int) ([]domain.Tweet, error) {
-	// Implement this function based on your criteria for "popular" tweets
-	return nil, errors.New("not implemented")
-}
-
 // GetTimeline retrieves the timeline for a user
 func (s *DynamoDBTweetService) GetTimeline(userID string) ([]domain.Tweet, error) {
-	result, err := s.DynamoDBClient.GetItem(s.Ctx, &dynamodb.GetItemInput{
-		TableName: aws.String("UserTimelines"),
-		Key: map[string]types.AttributeValue{
-			"UserID": &types.AttributeValueMemberS{Value: userID},
-		},
-	})
-	if err != nil {
+	// Try to get the timeline from Redis cache
+	cachedTimeline, err := s.RedisClient.Get(s.Ctx, "timeline:"+userID).Result()
+	if err == redis.Nil {
+		// If not found in cache, get it from DynamoDB
+		result, err := s.DynamoDBClient.GetItem(s.Ctx, &dynamodb.GetItemInput{
+			TableName: aws.String("UserTimelines"),
+			Key: map[string]types.AttributeValue{
+				"UserID": &types.AttributeValueMemberS{Value: userID},
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		if result.Item == nil || result.Item["Tweets"] == nil {
+			return nil, nil
+		}
+
+		tweetsAttr, ok := result.Item["Tweets"].(*types.AttributeValueMemberL)
+		if !ok || tweetsAttr == nil || len(tweetsAttr.Value) == 0 {
+			return nil, nil
+		}
+
+		tweetIDs := tweetsAttr.Value
+		var timeline []domain.Tweet
+
+		for _, tweetIDAttr := range tweetIDs {
+			tweetID := tweetIDAttr.(*types.AttributeValueMemberS).Value
+			tweet, err := s.GetTweet(tweetID)
+			if err != nil {
+				continue
+			}
+			timeline = append(timeline, tweet)
+		}
+
+		sort.Slice(timeline, func(i, j int) bool {
+			return timeline[i].Timestamp > timeline[j].Timestamp
+		})
+
+		// Cache the timeline in Redis
+		timelineJSON, err := json.Marshal(timeline)
+		if err != nil {
+			return nil, err
+		}
+		err = s.RedisClient.Set(s.Ctx, "timeline:"+userID, timelineJSON, 10*time.Minute).Err()
+		if err != nil {
+			return nil, err
+		}
+
+		return timeline, nil
+	} else if err != nil {
 		return nil, err
 	}
 
-	if result.Item == nil || result.Item["Tweets"] == nil {
-		return nil, nil
-	}
-
-	tweetsAttr, ok := result.Item["Tweets"].(*types.AttributeValueMemberL)
-	if !ok || tweetsAttr == nil || len(tweetsAttr.Value) == 0 {
-		return nil, nil
-	}
-
-	tweetIDs := tweetsAttr.Value
+	// If found in cache, return the cached timeline
 	var timeline []domain.Tweet
-
-	for _, tweetIDAttr := range tweetIDs {
-		tweetID := tweetIDAttr.(*types.AttributeValueMemberS).Value
-		tweet, err := s.GetTweet(tweetID)
-		if err != nil {
-			continue
-		}
-		timeline = append(timeline, tweet)
+	err = json.Unmarshal([]byte(cachedTimeline), &timeline)
+	if err != nil {
+		return nil, err
 	}
-
-	sort.Slice(timeline, func(i, j int) bool {
-		return timeline[i].Timestamp > timeline[j].Timestamp
-	})
 
 	return timeline, nil
 }

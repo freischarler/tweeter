@@ -70,25 +70,6 @@ func (s *RedisTweetService) GetTweet(tweetID string) (domain.Tweet, error) {
 	return tweet, nil
 }
 
-// GetPopularTweets retrieves the most popular tweets
-func (s *RedisTweetService) GetPopularTweets(limit int) ([]domain.Tweet, error) {
-	tweetIDs, err := s.RedisClient.ZRevRange(s.Ctx, "popular:tweets", 0, int64(limit-1)).Result()
-	if err != nil {
-		return nil, err
-	}
-
-	var tweets []domain.Tweet
-	for _, tweetID := range tweetIDs {
-		tweet, err := s.GetTweet(tweetID)
-		if err != nil {
-			continue
-		}
-		tweets = append(tweets, tweet)
-	}
-
-	return tweets, nil
-}
-
 // GetTimeline retrieves the timeline for a user
 func (s *RedisTweetService) GetTimeline(userID string) ([]domain.Tweet, error) {
 	// Fetch the list of followed users

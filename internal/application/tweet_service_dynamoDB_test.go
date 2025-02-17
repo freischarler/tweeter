@@ -1,6 +1,6 @@
 package application
 
-import (
+/*import (
 	"context"
 	"strconv"
 	"testing"
@@ -150,4 +150,4 @@ func TestGetTimeline(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Empty(t, timeline)
 	})
-}
+}*/

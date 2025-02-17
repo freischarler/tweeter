@@ -12,6 +12,17 @@ services:
     networks:
       - network
 
+  redis:
+    image: redis:6.2
+    container_name: redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--requirepass", ""]
+    networks:
+      - network
+    depends_on:
+      - dynamodb-local
+
   dynamodb-local:
     command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
     image: "amazon/dynamodb-local:latest"
@@ -42,9 +53,4 @@ services:
 networks:
   network:
     driver: bridge
-  #redis:
-  #  image: redis:6.2
-  #  container_name: redis
-  #  ports:
-  #    - "6379:6379"
-  #  command: ["redis-server", "--requirepass", ""]
+
