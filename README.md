@@ -8,21 +8,6 @@ git clone https://github.com/freischarler/tweeter.git
 cd tweeter
 ```
 
-2. Configura las variables de entorno para Redis:
-
-```sh
-export REDIS_HOST=localhost:6379
-export REDIS_PASSWORD=yourpassword
-export PORT=8080
-```
-
-3. Ejecuta la aplicación:
-
-```sh
-go run cmd/server/main.go
-go run cmd/server/main.go
-```
-
 ## Uso con Docker
 
 1. Asegúrate de tener Docker y Docker Compose instalados en tu máquina.
@@ -162,6 +147,10 @@ Se agrego un middleware que limita el número de solicitudes que un cliente pued
 ### Uso de Redis
 
 Se eligió Redis como base de datos debido a sus características de alto rendimiento y baja latencia, lo que lo hace ideal para aplicaciones que requieren una gran cantidad de lecturas rápidas. Redis almacena los datos en memoria, lo que permite acceder a ellos de manera extremadamente rápida. Esto es crucial para una aplicación que necesita escalar a millones de usuarios y estar optimizada para lecturas, como es el caso de esta aplicación de tweets.
+
+### Uso de DynamoDB (update)
+
+Se eligió DynamoDB como base de datos debido a sus características de alta disponibilidad y escalabilidad automática, lo que lo hace ideal para aplicaciones que requieren una gran cantidad de lecturas y escrituras rápidas. DynamoDB es un servicio de base de datos NoSQL completamente administrado que proporciona un rendimiento predecible y escalabilidad sin necesidad de administración. Esto es crucial para una aplicación que necesita escalar a millones de usuarios y estar optimizada para lecturas y escrituras, como es el caso de esta aplicación de tweets.
 
 ### Arquitectura Hexagonal en Go
 
