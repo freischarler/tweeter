@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log"
 	"sort"
 	"strconv"
 	"time"
@@ -113,6 +114,9 @@ func (s *DynamoDBTweetService) GetTimeline(userID string) ([]domain.Tweet, error
 	// Try to get the timeline from Redis cache
 	cachedTimeline, err := s.RedisClient.Get(s.Ctx, "timeline:"+userID).Result()
 	if err == redis.Nil {
+		// Log cache miss
+		log.Printf("Cache miss for user timeline: %s", userID)
+
 		// If not found in cache, get it from DynamoDB
 		result, err := s.DynamoDBClient.GetItem(s.Ctx, &dynamodb.GetItemInput{
 			TableName: aws.String("UserTimelines"),
@@ -163,6 +167,9 @@ func (s *DynamoDBTweetService) GetTimeline(userID string) ([]domain.Tweet, error
 	} else if err != nil {
 		return nil, err
 	}
+
+	// Log cache hit
+	log.Printf("Cache hit for user timeline: %s", userID)
 
 	// If found in cache, return the cached timeline
 	var timeline []domain.Tweet

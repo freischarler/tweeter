@@ -52,22 +52,31 @@ func NewDynamoDBClient() (*dynamodb.Client, error) {
 
 	client := dynamodb.NewFromConfig(cfg, GetLocalConfiguration(endpoint))
 
-	// Test connection
-	err = TestDynamoDBConnection(client)
+	// Test connection with retries
+	maxRetries := 5
+	delay := 2 * time.Second
+	err = TestDynamoDBConnection(client, maxRetries, delay)
 	if err != nil {
-		log.Fatalf("Failed to connect to DynamoDB: %v", err)
+		log.Fatalf("Failed to connect to DynamoDB after %d attempts: %v", maxRetries, err)
 		return nil, err
 	}
 
 	log.Println("Conectado a DynamoDB Local correctamente.")
 
 	return client, nil
-
 }
 
-// TestDynamoDBConnection tests the connection to DynamoDB by listing tables
-func TestDynamoDBConnection(client *dynamodb.Client) error {
-	_, err := client.ListTables(context.TODO(), &dynamodb.ListTablesInput{})
+// TestDynamoDBConnection tests the connection to DynamoDB by listing tables with retries
+func TestDynamoDBConnection(client *dynamodb.Client, maxRetries int, delay time.Duration) error {
+	var err error
+	for i := 0; i < maxRetries; i++ {
+		_, err = client.ListTables(context.TODO(), &dynamodb.ListTablesInput{})
+		if err == nil {
+			return nil
+		}
+		log.Printf("Failed to connect to DynamoDB (attempt %d/%d): %v", i+1, maxRetries, err)
+		time.Sleep(delay)
+	}
 	return err
 }
 
