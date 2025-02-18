@@ -133,8 +133,8 @@ Ejemplo de respuesta
     }
 ]
 
-### Pruebas Unitarias
-Para ejecutar las pruebas unitarias, usa el siguiente comando:
+### Testing
+Para ejecutar los test, usa el siguiente comando:
 
 ```
 go test ./internal/application -v
@@ -146,7 +146,7 @@ Se agrego un middleware que limita el número de solicitudes que un cliente pued
 
 ### Uso de Redis
 
-Se eligió Redis como base de datos debido a sus características de alto rendimiento y baja latencia, lo que lo hace ideal para aplicaciones que requieren una gran cantidad de lecturas rápidas. Redis almacena los datos en memoria, lo que permite acceder a ellos de manera extremadamente rápida. Esto es crucial para una aplicación que necesita escalar a millones de usuarios y estar optimizada para lecturas, como es el caso de esta aplicación de tweets.
+Redis se usa a modo cache para obtener los Timeline más requeridos. Se eligió Redis como base de datos debido a sus características de alto rendimiento y baja latencia, lo que lo hace ideal para aplicaciones que requieren una gran cantidad de lecturas rápidas. Redis almacena los datos en memoria, lo que permite acceder a ellos de manera extremadamente rápida. Esto es crucial para una aplicación que necesita escalar a millones de usuarios y estar optimizada para lecturas, como es el caso de esta aplicación de tweets.
 
 ### Uso de DynamoDB (update)
 
@@ -168,10 +168,4 @@ Escalabilidad y Mantenibilidad: La arquitectura hexagonal facilita la escalabili
 
 1. Autenticación y Autorización: Implementar un sistema de autenticación y autorización para asegurar que solo usuarios autenticados puedan publicar tweets y seguir a otros usuarios.
 
-2. Microservicios: Dividir la aplicación en microservicios independientes para mejorar la escalabilidad y la mantenibilidad.
-
-3. Notificaciones en Tiempo Real: Implementar notificaciones en tiempo real para alertar a los usuarios cuando reciben nuevos seguidores o tweets.
-
-4. Optimización del Rendimiento: Optimizar el rendimiento de la aplicación mediante el uso de técnicas de caching, balanceo de carga y optimización de consultas.
-
-5. Pruebas Automatizadas: Añadir pruebas unitarias y de integración para asegurar la calidad del código y facilitar el desarrollo continuo.
+2. Notificaciones en Tiempo Real: Implementar notificaciones en tiempo real para alertar los usuarios cuando reciben nuevos seguidores o tweets.
