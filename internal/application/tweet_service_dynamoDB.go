@@ -22,15 +22,20 @@ var (
 	MaxTweetLength   = 280
 )
 
+type RedisClient interface {
+	Get(ctx context.Context, key string) *redis.StringCmd
+	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd
+}
+
 // DynamoDBTweetService implements TweetService using DynamoDB
 type DynamoDBTweetService struct {
 	DynamoDBClient DynamoDBClient
-	RedisClient    *redis.Client
+	RedisClient    RedisClient
 	Ctx            context.Context
 }
 
 // NewDynamoDBTweetService creates a new DynamoDBTweetService
-func NewDynamoDBTweetService(dynamoDBClient DynamoDBClient, redisClient *redis.Client) *DynamoDBTweetService {
+func NewDynamoDBTweetService(dynamoDBClient DynamoDBClient, redisClient RedisClient) *DynamoDBTweetService {
 	return &DynamoDBTweetService{
 		DynamoDBClient: dynamoDBClient,
 		RedisClient:    redisClient,

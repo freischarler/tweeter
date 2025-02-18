@@ -1,13 +1,16 @@
 package application
 
-/*import (
+import (
 	"context"
+	"encoding/json"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/freischarler/desafio-twitter/internal/domain"
+	"github.com/go-redis/redis/v8"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,6 +32,19 @@ func (m *MockDynamoDBClient) UpdateItem(ctx context.Context, input *dynamodb.Upd
 	return m.UpdateItemFunc(ctx, input, opts...)
 }
 
+type MockRedisClient struct {
+	GetFunc func(ctx context.Context, key string) *redis.StringCmd
+	SetFunc func(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd
+}
+
+func (m *MockRedisClient) Get(ctx context.Context, key string) *redis.StringCmd {
+	return m.GetFunc(ctx, key)
+}
+
+func (m *MockRedisClient) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd {
+	return m.SetFunc(ctx, key, value, expiration)
+}
+
 func TestPostTweet(t *testing.T) {
 	mockDynamoDBClient := &MockDynamoDBClient{
 		PutItemFunc: func(ctx context.Context, input *dynamodb.PutItemInput, opts ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error) {
@@ -38,7 +54,9 @@ func TestPostTweet(t *testing.T) {
 			return &dynamodb.UpdateItemOutput{}, nil
 		},
 	}
-	service := NewDynamoDBTweetService(mockDynamoDBClient)
+	mockRedisClient := &MockRedisClient{}
+
+	service := NewDynamoDBTweetService(mockDynamoDBClient, mockRedisClient)
 
 	t.Run("should post tweet successfully", func(t *testing.T) {
 		tweetID, err := service.PostTweet("1", "Hello World")
@@ -71,7 +89,9 @@ func TestGetTweet(t *testing.T) {
 			return &dynamodb.GetItemOutput{}, nil
 		},
 	}
-	service := NewDynamoDBTweetService(mockDynamoDBClient)
+	mockRedisClient := &MockRedisClient{}
+
+	service := NewDynamoDBTweetService(mockDynamoDBClient, mockRedisClient)
 
 	t.Run("should get tweet successfully", func(t *testing.T) {
 		tweet, err := service.GetTweet("1")
@@ -126,9 +146,27 @@ func TestGetTimeline(t *testing.T) {
 			return &dynamodb.GetItemOutput{}, nil
 		},
 	}
-	service := NewDynamoDBTweetService(mockDynamoDBClient)
+	mockRedisClient := &MockRedisClient{
+		GetFunc: func(ctx context.Context, key string) *redis.StringCmd {
+			return redis.NewStringResult("", nil)
+		},
+		SetFunc: func(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd {
+			return redis.NewStatusResult("", nil)
+		},
+	}
+
+	service := NewDynamoDBTweetService(mockDynamoDBClient, mockRedisClient)
 
 	t.Run("should get timeline successfully", func(t *testing.T) {
+		mockRedisClient.GetFunc = func(ctx context.Context, key string) *redis.StringCmd {
+			tweets := []domain.Tweet{
+				{TweetID: "1", UserID: "1", Content: "Hello World", Timestamp: time.Now().UnixNano()},
+				{TweetID: "2", UserID: "1", Content: "Hello Again", Timestamp: time.Now().UnixNano()},
+			}
+			tweetsJSON, _ := json.Marshal(tweets)
+			return redis.NewStringResult(string(tweetsJSON), nil)
+		}
+
 		timeline, err := service.GetTimeline("1")
 		assert.NoError(t, err)
 		assert.Len(t, timeline, 2)
@@ -137,6 +175,10 @@ func TestGetTimeline(t *testing.T) {
 	})
 
 	t.Run("should return empty timeline if no tweets found", func(t *testing.T) {
+		mockRedisClient.GetFunc = func(ctx context.Context, key string) *redis.StringCmd {
+			return redis.NewStringResult("", redis.Nil)
+		}
+
 		mockDynamoDBClient.GetItemFunc = func(ctx context.Context, input *dynamodb.GetItemInput, opts ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error) {
 			return &dynamodb.GetItemOutput{
 				Item: map[string]types.AttributeValue{
@@ -150,4 +192,21 @@ func TestGetTimeline(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Empty(t, timeline)
 	})
-}*/
+
+	t.Run("should handle cache hit", func(t *testing.T) {
+		mockRedisClient.GetFunc = func(ctx context.Context, key string) *redis.StringCmd {
+			tweets := []domain.Tweet{
+				{TweetID: "1", UserID: "1", Content: "Hello World", Timestamp: time.Now().UnixNano()},
+				{TweetID: "2", UserID: "1", Content: "Hello Again", Timestamp: time.Now().UnixNano()},
+			}
+			tweetsJSON, _ := json.Marshal(tweets)
+			return redis.NewStringResult(string(tweetsJSON), nil)
+		}
+
+		timeline, err := service.GetTimeline("1")
+		assert.NoError(t, err)
+		assert.Len(t, timeline, 2)
+		assert.Equal(t, "1", timeline[0].TweetID)
+		assert.Equal(t, "2", timeline[1].TweetID)
+	})
+}
