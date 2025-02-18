@@ -18,6 +18,7 @@ type MockDynamoDBClient struct {
 	PutItemFunc    func(ctx context.Context, input *dynamodb.PutItemInput, opts ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error)
 	GetItemFunc    func(ctx context.Context, input *dynamodb.GetItemInput, opts ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error)
 	UpdateItemFunc func(ctx context.Context, input *dynamodb.UpdateItemInput, opts ...func(*dynamodb.Options)) (*dynamodb.UpdateItemOutput, error)
+	QueryFunc      func(ctx context.Context, input *dynamodb.QueryInput, opts ...func(*dynamodb.Options)) (*dynamodb.QueryOutput, error)
 }
 
 func (m *MockDynamoDBClient) PutItem(ctx context.Context, input *dynamodb.PutItemInput, opts ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error) {
@@ -30,6 +31,10 @@ func (m *MockDynamoDBClient) GetItem(ctx context.Context, input *dynamodb.GetIte
 
 func (m *MockDynamoDBClient) UpdateItem(ctx context.Context, input *dynamodb.UpdateItemInput, opts ...func(*dynamodb.Options)) (*dynamodb.UpdateItemOutput, error) {
 	return m.UpdateItemFunc(ctx, input, opts...)
+}
+
+func (m *MockDynamoDBClient) Query(ctx context.Context, input *dynamodb.QueryInput, opts ...func(*dynamodb.Options)) (*dynamodb.QueryOutput, error) {
+	return m.QueryFunc(ctx, input, opts...)
 }
 
 type MockRedisClient struct {
@@ -54,7 +59,14 @@ func TestPostTweet(t *testing.T) {
 			return &dynamodb.UpdateItemOutput{}, nil
 		},
 	}
-	mockRedisClient := &MockRedisClient{}
+	mockRedisClient := &MockRedisClient{
+		GetFunc: func(ctx context.Context, key string) *redis.StringCmd {
+			return redis.NewStringResult("", redis.Nil)
+		},
+		SetFunc: func(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd {
+			return redis.NewStatusResult("", nil)
+		},
+	}
 
 	service := NewDynamoRedisTweetService(mockDynamoDBClient, mockRedisClient)
 
@@ -145,6 +157,19 @@ func TestGetTimeline(t *testing.T) {
 			}
 			return &dynamodb.GetItemOutput{}, nil
 		},
+		QueryFunc: func(ctx context.Context, input *dynamodb.QueryInput, opts ...func(*dynamodb.Options)) (*dynamodb.QueryOutput, error) {
+			if *input.TableName == "UserFollowers" {
+				return &dynamodb.QueryOutput{
+					Items: []map[string]types.AttributeValue{
+						{
+							"UserID":     &types.AttributeValueMemberS{Value: "1"},
+							"FolloweeID": &types.AttributeValueMemberS{Value: "2"},
+						},
+					},
+				}, nil
+			}
+			return &dynamodb.QueryOutput{}, nil
+		},
 	}
 	mockRedisClient := &MockRedisClient{
 		GetFunc: func(ctx context.Context, key string) *redis.StringCmd {
@@ -208,5 +233,64 @@ func TestGetTimeline(t *testing.T) {
 		assert.Len(t, timeline, 2)
 		assert.Equal(t, "1", timeline[0].TweetID)
 		assert.Equal(t, "2", timeline[1].TweetID)
+	})
+
+	t.Run("should get timeline with followed user's tweet", func(t *testing.T) {
+		mockRedisClient.GetFunc = func(ctx context.Context, key string) *redis.StringCmd {
+			return redis.NewStringResult("", redis.Nil)
+		}
+
+		mockDynamoDBClient.GetItemFunc = func(ctx context.Context, input *dynamodb.GetItemInput, opts ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error) {
+			if input.TableName != nil && *input.TableName == "UserTimelines" {
+				if input.Key["UserID"].(*types.AttributeValueMemberS).Value == "1" {
+					return &dynamodb.GetItemOutput{
+						Item: map[string]types.AttributeValue{
+							"UserID": &types.AttributeValueMemberS{Value: "1"},
+							"Tweets": &types.AttributeValueMemberL{Value: []types.AttributeValue{}},
+						},
+					}, nil
+				}
+				if input.Key["UserID"].(*types.AttributeValueMemberS).Value == "2" {
+					return &dynamodb.GetItemOutput{
+						Item: map[string]types.AttributeValue{
+							"UserID": &types.AttributeValueMemberS{Value: "2"},
+							"Tweets": &types.AttributeValueMemberL{Value: []types.AttributeValue{
+								&types.AttributeValueMemberS{Value: "1"},
+							}},
+						},
+					}, nil
+				}
+			}
+			if input.Key["TweetID"].(*types.AttributeValueMemberS).Value == "1" {
+				return &dynamodb.GetItemOutput{
+					Item: map[string]types.AttributeValue{
+						"TweetID":   &types.AttributeValueMemberS{Value: "1"},
+						"UserID":    &types.AttributeValueMemberS{Value: "2"},
+						"Content":   &types.AttributeValueMemberS{Value: "Hello World"},
+						"Timestamp": &types.AttributeValueMemberN{Value: strconv.FormatInt(time.Now().UnixNano(), 10)},
+					},
+				}, nil
+			}
+			return &dynamodb.GetItemOutput{}, nil
+		}
+
+		mockDynamoDBClient.QueryFunc = func(ctx context.Context, input *dynamodb.QueryInput, opts ...func(*dynamodb.Options)) (*dynamodb.QueryOutput, error) {
+			if *input.TableName == "UserFollowers" {
+				return &dynamodb.QueryOutput{
+					Items: []map[string]types.AttributeValue{
+						{
+							"UserID":     &types.AttributeValueMemberS{Value: "1"},
+							"FolloweeID": &types.AttributeValueMemberS{Value: "2"},
+						},
+					},
+				}, nil
+			}
+			return &dynamodb.QueryOutput{}, nil
+		}
+
+		timeline, err := service.GetTimeline("1")
+		assert.NoError(t, err)
+		assert.Len(t, timeline, 1)
+		assert.Equal(t, "1", timeline[0].TweetID)
 	})
 }
