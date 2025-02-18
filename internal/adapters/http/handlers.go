@@ -5,11 +5,11 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/freischarler/desafio-twitter/internal/application"
+	"github.com/freischarler/desafio-twitter/internal/domain"
 )
 
 // PostTweet handles posting a tweet
-func PostTweet(tweetService application.TweetService) http.HandlerFunc {
+func PostTweet(tweetService domain.TweetService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Received %s request for %s", r.Method, r.URL.Path)
 		r.ParseForm()
@@ -42,7 +42,7 @@ func PostTweet(tweetService application.TweetService) http.HandlerFunc {
 }
 
 // FollowUser handles following a user
-func FollowUser(userService application.UserService) http.HandlerFunc {
+func FollowUser(userService domain.UserService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Received %s request for %s", r.Method, r.URL.Path)
 		r.ParseForm()
@@ -69,7 +69,7 @@ func FollowUser(userService application.UserService) http.HandlerFunc {
 }
 
 // Timeline handles viewing a user's timeline
-func Timeline(tweetService application.TweetService) http.HandlerFunc {
+func Timeline(tweetService domain.TweetService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Received %s request for %s", r.Method, r.URL.Path)
 		userID := r.URL.Path[len("/timeline/"):]

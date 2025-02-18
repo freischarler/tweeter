@@ -3,7 +3,6 @@ package application
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"log"
 	"sort"
 	"strconv"
@@ -17,21 +16,12 @@ import (
 )
 
 var (
-	ErrTweetTooLong  = errors.New("tweet too long")
-	ErrTweetNotFound = errors.New("tweet not found")
-	MaxTweetLength   = 280
+	MaxTweetLength = 280
 )
 
 type RedisClient interface {
 	Get(ctx context.Context, key string) *redis.StringCmd
 	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd
-}
-
-// TweetService defines the interface for tweet-related operations
-type TweetService interface {
-	PostTweet(userID, tweet string) (string, error)
-	GetTweet(tweetID string) (domain.Tweet, error)
-	GetTimeline(userID string) ([]domain.Tweet, error)
 }
 
 type DynamoDBClient interface {
@@ -59,7 +49,7 @@ func NewDynamoRedisTweetService(dynamoDBClient DynamoDBClient, redisClient Redis
 // PostTweet posts a new tweet
 func (s *DynamoRedisTweetService) PostTweet(userID, tweet string) (string, error) {
 	if len(tweet) > MaxTweetLength {
-		return "", ErrTweetTooLong
+		return "", domain.ErrTweetTooLong
 	}
 
 	tweetID := strconv.FormatInt(time.Now().UnixNano(), 10)
@@ -108,12 +98,12 @@ func (s *DynamoRedisTweetService) GetTweet(tweetID string) (domain.Tweet, error)
 	}
 
 	if result.Item == nil {
-		return domain.Tweet{}, ErrTweetNotFound
+		return domain.Tweet{}, domain.ErrTweetNotFound
 	}
 
 	timestampAttr, ok := result.Item["Timestamp"].(*types.AttributeValueMemberN)
 	if !ok || timestampAttr == nil {
-		return domain.Tweet{}, ErrTweetNotFound
+		return domain.Tweet{}, domain.ErrTweetNotFound
 	}
 	timestamp, _ := strconv.ParseInt(timestampAttr.Value, 10, 64)
 

@@ -14,9 +14,6 @@ import (
 )
 
 func main() {
-	var tweetService application.TweetService
-	var userService application.UserService
-
 	dynamoDBClient, err := dynamoDb.NewDynamoDBClient()
 	if err != nil {
 		log.Fatalf("Could not create DynamoDB client: %s\n", err)
@@ -28,8 +25,8 @@ func main() {
 	redisClient := redis.NewRedisClient()
 
 	// Crear los servicios usando DynamoDB
-	tweetService = application.NewDynamoRedisTweetService(dynamoDBClient, redisClient)
-	userService = application.NewDynamoDBUserService(dynamoDBClient)
+	tweetService := application.NewDynamoRedisTweetService(dynamoDBClient, redisClient)
+	userService := application.NewDynamoDBUserService(dynamoDBClient)
 
 	mux := http.NewServeMux()
 

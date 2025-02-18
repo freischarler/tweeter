@@ -68,7 +68,7 @@ func TestPostTweet(t *testing.T) {
 		longTweet := make([]byte, MaxTweetLength+1)
 		tweetID, err := service.PostTweet("1", string(longTweet))
 		assert.Error(t, err)
-		assert.Equal(t, ErrTweetTooLong, err)
+		assert.Equal(t, domain.ErrTweetTooLong, err)
 		assert.Empty(t, tweetID)
 	})
 }
@@ -104,7 +104,7 @@ func TestGetTweet(t *testing.T) {
 	t.Run("should return error if tweet not found", func(t *testing.T) {
 		tweet, err := service.GetTweet("2")
 		assert.Error(t, err)
-		assert.Equal(t, ErrTweetNotFound, err)
+		assert.Equal(t, domain.ErrTweetNotFound, err)
 		assert.Empty(t, tweet.TweetID)
 	})
 }
