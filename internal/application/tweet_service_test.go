@@ -56,7 +56,7 @@ func TestPostTweet(t *testing.T) {
 	}
 	mockRedisClient := &MockRedisClient{}
 
-	service := NewDynamoDBTweetService(mockDynamoDBClient, mockRedisClient)
+	service := NewDynamoRedisTweetService(mockDynamoDBClient, mockRedisClient)
 
 	t.Run("should post tweet successfully", func(t *testing.T) {
 		tweetID, err := service.PostTweet("1", "Hello World")
@@ -91,7 +91,7 @@ func TestGetTweet(t *testing.T) {
 	}
 	mockRedisClient := &MockRedisClient{}
 
-	service := NewDynamoDBTweetService(mockDynamoDBClient, mockRedisClient)
+	service := NewDynamoRedisTweetService(mockDynamoDBClient, mockRedisClient)
 
 	t.Run("should get tweet successfully", func(t *testing.T) {
 		tweet, err := service.GetTweet("1")
@@ -155,7 +155,7 @@ func TestGetTimeline(t *testing.T) {
 		},
 	}
 
-	service := NewDynamoDBTweetService(mockDynamoDBClient, mockRedisClient)
+	service := NewDynamoRedisTweetService(mockDynamoDBClient, mockRedisClient)
 
 	t.Run("should get timeline successfully", func(t *testing.T) {
 		mockRedisClient.GetFunc = func(ctx context.Context, key string) *redis.StringCmd {

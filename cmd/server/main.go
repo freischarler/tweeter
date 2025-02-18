@@ -28,7 +28,7 @@ func main() {
 	redisClient := redis.NewRedisClient()
 
 	// Crear los servicios usando DynamoDB
-	tweetService = application.NewDynamoDBTweetService(dynamoDBClient, redisClient)
+	tweetService = application.NewDynamoRedisTweetService(dynamoDBClient, redisClient)
 	userService = application.NewDynamoDBUserService(dynamoDBClient)
 
 	mux := http.NewServeMux()

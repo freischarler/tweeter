@@ -13,13 +13,6 @@ var (
 	ErrCannotFollowSelf = errors.New("cannot follow self")
 )
 
-// DynamoDBClient is an interface that defines the methods we need from DynamoDB
-type DynamoDBClient interface {
-	GetItem(ctx context.Context, input *dynamodb.GetItemInput, opts ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error)
-	PutItem(ctx context.Context, input *dynamodb.PutItemInput, opts ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error)
-	UpdateItem(ctx context.Context, input *dynamodb.UpdateItemInput, opts ...func(*dynamodb.Options)) (*dynamodb.UpdateItemOutput, error)
-}
-
 // DynamoDBUserService handles user-related operations using DynamoDB
 type DynamoDBUserService struct {
 	DynamoDBClient DynamoDBClient
