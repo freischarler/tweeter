@@ -1,7 +1,9 @@
 package middleware
 
 import (
+	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -42,6 +44,25 @@ func (rl *rateLimiter) getVisitor(ip string) *visitor {
 			limiter <- time.Now()
 		}
 		v = &visitor{limiter: limiter, lastSeen: time.Now()}
+
+		// Goroutine para agregar tokens al bucket
+		go func() {
+			ticker := time.NewTicker(rl.rate)
+			defer ticker.Stop()
+			for range ticker.C {
+				rl.mu.Lock()
+				if _, exists := rl.visitors[ip]; !exists {
+					rl.mu.Unlock()
+					return
+				}
+				select {
+				case v.limiter <- time.Now():
+				default: // No llenar en exceso
+				}
+				rl.mu.Unlock()
+			}
+		}()
+
 		rl.visitors[ip] = v
 	}
 
@@ -64,17 +85,27 @@ func (rl *rateLimiter) cleanupVisitors() {
 
 func (rl *rateLimiter) limit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ip := r.RemoteAddr
+		ip := getIP(r)
 		v := rl.getVisitor(ip)
 
 		select {
 		case <-v.limiter:
 			next.ServeHTTP(w, r)
-			v.limiter <- time.Now().Add(rl.rate)
 		default:
 			http.Error(w, "Too Many Requests", http.StatusTooManyRequests)
 		}
 	})
+}
+
+func getIP(r *http.Request) string {
+	ip := r.RemoteAddr
+	if ip == "" {
+		ip = "127.0.0.1"
+	}
+	if strings.Contains(ip, ":") {
+		ip, _, _ = net.SplitHostPort(ip)
+	}
+	return ip
 }
 
 // RateLimitMiddleware creates a rate limiting middleware
